@@ -132,7 +132,6 @@ namespace afs::mem_units {
     }
 
     template<MemoryUnitType ToType, MemoryUnitType FromType>
-        requires std::ratio_greater_equal_v<typename FromType::ratio, typename ToType::ratio>
     [[nodiscard]] constexpr ToType memory_unit_cast(const FromType& from) {
         using Rep = typename ToType::rep;
         using conversion = std::ratio_divide<typename FromType::ratio, typename ToType::ratio>;

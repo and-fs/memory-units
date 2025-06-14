@@ -90,14 +90,24 @@ TEST(AMemoryUnit, CanCompareGreaterWithBiggerUnitType) {
 }
 
 TEST(AMemoryUnit, CanCompareGreaterWithSmallerUnitType) {
-    const megabytes mb(2);
-    const kilobytes kb(6000);
-    ASSERT_GT(kb, mb);
+    ASSERT_GT(kilobytes(6000), megabytes(2));
 }
 
 TEST(AMemoryUnit, CanCastToSameUnitType) {
-    constexpr kilobytes kb(42);
-    ASSERT_THAT(memory_unit_cast<kilobytes>(kb), Eq(kb));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(kilobytes(42)), Eq(kilobytes(42)));
+}
+
+TEST(AMemoryUnit, CanCastToSmallerUnitType) {
+    ASSERT_THAT(memory_unit_cast<kilobytes>(gigabytes(4)), Eq(kilobytes(4 * 1024 * 1024)));
+}
+
+TEST(AMemoryUnit, CanCastToBiggerUnitType) {
+    ASSERT_THAT(memory_unit_cast<kilobytes>(bytes(4096)), Eq(kilobytes(4)));
+}
+
+TEST(AMemoryUnit, CastToBiggerUnitTypeRoundsDown) {
+    ASSERT_THAT(memory_unit_cast<kilobytes>(bytes(1234)), Eq(kilobytes(1)));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(bytes(2047)), Eq(kilobytes(1)));
 }
 
 // TEST(AMemoryUnit, Of8BitsIsAByte) {
