@@ -165,7 +165,40 @@ namespace afs::mem_units {
         else return "?";
     }
 
+    namespace literals {
+        constexpr bits operator"" _bit(unsigned long long count) {
+            return bits{static_cast<bits::rep>(count)};
+        }
 
+        constexpr bytes operator"" _b(unsigned long long count) {
+            return bytes{static_cast<bytes::rep>(count)};
+        }
+
+        constexpr kilobytes operator"" _kb(unsigned long long count) {
+            return kilobytes{static_cast<kilobytes::rep>(count)};
+        }
+
+        constexpr megabytes operator"" _mb(unsigned long long count) {
+            return megabytes{static_cast<megabytes::rep>(count)};
+        }
+
+        constexpr gigabytes operator"" _gb(unsigned long long count) {
+            return gigabytes{static_cast<gigabytes::rep>(count)};
+        }
+
+        constexpr terabytes operator"" _tb(unsigned long long count) {
+            return terabytes{static_cast<terabytes::rep>(count)};
+        }
+
+        constexpr petabytes operator"" _pb(unsigned long long count) {
+            return petabytes{static_cast<petabytes::rep>(count)};
+        }
+
+        constexpr exabytes operator"" _eb(unsigned long long count) {
+            return exabytes{static_cast<exabytes::rep>(count)};
+        }
+
+    }
 }
 
 namespace std {
