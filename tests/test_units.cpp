@@ -14,6 +14,7 @@ namespace afs::mem_units {
 }
 
 using namespace afs::mem_units;
+using namespace afs::mem_units::literals;
 
 TEST(AMemoryUnit, HasCountOf0WhenDefaultConstructed) {
     constexpr memory_unit<std::uint64_t, std::ratio<1>> unit{};
@@ -26,9 +27,7 @@ TEST(AMemoryUnit, HasCountOfConstruction) {
 }
 
 TEST(AMemoryUnit, IsComparableToSameType) {
-    constexpr bytes byte_8(8);
-    constexpr bytes byte_42(42);
-    ASSERT_THAT(byte_8, ::testing::Lt(byte_42));
+    ASSERT_LT(bytes(8), bytes(42));
 }
 
 TEST(AMemoryUnit, CanAddAnotherOfSameType) {
@@ -61,53 +60,77 @@ TEST(AMemoryUnit, SubtractRaisesUnderflowErrorIfDifferenceIsBelowMinOfSigned) {
     ASSERT_THROW(std::ignore = value_120 - value_42, std::underflow_error);
 }
 
+TEST(AMemoryUnit, SupportsBitLiteral) {
+    ASSERT_THAT(3_bit, Eq(bits(3)));
+}
+
+TEST(AMemoryUnit, SupportsByteLiteral) {
+    ASSERT_THAT(42_b, Eq(bytes(42)));
+}
+
+TEST(AMemoryUnit, SupportsKilobyteLiteral) {
+    ASSERT_THAT(4_kb, Eq(kilobytes(4)));
+}
+
+TEST(AMemoryUnit, SupportsMegabyteLiteral) {
+    ASSERT_THAT(9_mb, Eq(megabytes(9)));
+}
+
+TEST(AMemoryUnit, SupportsGigabyteLiteral) {
+    ASSERT_THAT(123_gb, Eq(gigabytes(123)));
+}
+
+TEST(AMemoryUnit, SupportsTerabyteLiteral) {
+    ASSERT_THAT(91_tb, Eq(terabytes(91)));
+}
+
+TEST(AMemoryUnit, SupportsPetabyteLiteral) {
+    ASSERT_THAT(2_pb, Eq(petabytes(2)));
+}
+
+TEST(AMemoryUnit, SupportsExabyteLiteral) {
+    ASSERT_THAT(76_eb, Eq(exabytes(76)));
+}
+
 TEST(AMemoryUnit, CanCompareEqualityWithSameUnitType) {
-    constexpr bytes byte_a(1024), byte_b(1024);
-    ASSERT_EQ(byte_a, byte_b);
+    ASSERT_EQ(1024_b, 1024_b);
 }
 
 TEST(AMemoryUnit, CanCompareEqualityWithBiggerUnitType) {
-    constexpr bytes byte_1024(1024);
-    constexpr kilobytes kb_1(1);
-    ASSERT_EQ(byte_1024, kb_1);
+    ASSERT_EQ(1024_b, 1_kb);
 }
 
 TEST(AMemoryUnit, CanCompareEqualityWithSmallerUnitType) {
-    constexpr megabytes mb(1);
-    constexpr kilobytes kb(1024);
-    ASSERT_EQ(mb, kb);
+    ASSERT_EQ(1_mb, 1024_kb);
 }
 
 TEST(AMemoryUnit, CanCompareGreaterWithSameUnitType) {
-    constexpr bytes byte_a(234), byte_b(42);
-    ASSERT_GT(byte_a, byte_b);
+    ASSERT_GT(234_b, 42_b);
 }
 
 TEST(AMemoryUnit, CanCompareGreaterWithBiggerUnitType) {
-    constexpr kilobytes kb(4000);
-    constexpr gigabytes gb(2);
-    ASSERT_GT(gb, kb);
+    ASSERT_GT(2_gb, 4000_kb);
 }
 
 TEST(AMemoryUnit, CanCompareGreaterWithSmallerUnitType) {
-    ASSERT_GT(kilobytes(6000), megabytes(2));
+    ASSERT_GT(6000_kb, 2_mb);
 }
 
 TEST(AMemoryUnit, CanCastToSameUnitType) {
-    ASSERT_THAT(memory_unit_cast<kilobytes>(kilobytes(42)), Eq(kilobytes(42)));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(42_kb), Eq(42_kb));
 }
 
 TEST(AMemoryUnit, CanCastToSmallerUnitType) {
-    ASSERT_THAT(memory_unit_cast<kilobytes>(gigabytes(4)), Eq(kilobytes(4 * 1024 * 1024)));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(4_gb), Eq(kilobytes(4 * 1024 * 1024)));
 }
 
 TEST(AMemoryUnit, CanCastToBiggerUnitType) {
-    ASSERT_THAT(memory_unit_cast<kilobytes>(bytes(4096)), Eq(kilobytes(4)));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(4096_b), Eq(4_kb));
 }
 
 TEST(AMemoryUnit, CastToBiggerUnitTypeRoundsDown) {
-    ASSERT_THAT(memory_unit_cast<kilobytes>(bytes(1234)), Eq(kilobytes(1)));
-    ASSERT_THAT(memory_unit_cast<kilobytes>(bytes(2047)), Eq(kilobytes(1)));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(1234_b), Eq(1_kb));
+    ASSERT_THAT(memory_unit_cast<kilobytes>(2047_b), Eq(1_kb));
 }
 
 // TEST(AMemoryUnit, Of8BitsIsAByte) {
