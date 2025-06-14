@@ -30,11 +30,17 @@ TEST(AMemoryUnit, IsComparableToSameType) {
     ASSERT_LT(bytes(8), bytes(42));
 }
 
-TEST(AMemoryUnit, CanAddAnotherOfSameType) {
-    constexpr bytes byte_8(8);
-    constexpr bytes byte_42(42);
-    ASSERT_THAT((byte_8 + byte_42).count(), Eq(bytes(50).count()));
+TEST(AMemoryUnit, CanAddAnotherUnitWithSameRatio) {
+    ASSERT_THAT(8_b + 42_b, Eq(50_b));
 }
+
+TEST(AMemoryUnit, CanAddAnotherUnitWithGreaterRatio) {
+    ASSERT_THAT(42_kb + 3_mb, Eq(3'114_kb));
+}
+
+// TEST(AMemoryUnit, CanAddAnotherUnitWithSmallerRatio) {
+//     ASSERT_THAT(5_gb + 43_mb, Eq(5'163_mb));
+// }
 
 TEST(AMemoryUnit, AddRaisesOverflowErrorIfSumWouldBeTooBig) {
     using test_unit = memory_unit<std::uint8_t, std::ratio<1>>;
@@ -132,6 +138,48 @@ TEST(AMemoryUnit, CastToBiggerUnitTypeRoundsDown) {
     ASSERT_THAT(memory_unit_cast<kilobytes>(1234_b), Eq(1_kb));
     ASSERT_THAT(memory_unit_cast<kilobytes>(2047_b), Eq(1_kb));
 }
+
+TEST(AMemoryUnit, CastsFromBit) {
+    ASSERT_THAT(memory_unit_cast<bytes>(8_bit), Eq(1_b));
+    ASSERT_THAT(memory_unit_cast<bytes>(32_bit), Eq(4_b));
+}
+
+TEST(AMemoryUnit, IsCopyConstructibleFromSameUnit) {
+    const bytes original(42_b);
+    const bytes copied(original);
+    ASSERT_EQ(original, copied);
+}
+
+TEST(AMemoryUnit, IsCopyConstructibleFromGreaterUnit) {
+    const megabytes original = 2_mb;
+    const bytes copied(original);
+    ASSERT_EQ(original, copied);
+}
+
+TEST(AMemoryUnit, IsNotCopyConstructibleFromSmallerUnit) {
+    // this expectedly fails to compile:
+    // constexpr gigabytes gb(41_kb);
+}
+
+TEST(AMemoryUnit, IsAssignableFromSameUnit) {
+    constexpr megabytes original(123);
+    megabytes copied{};
+    copied = original;
+    ASSERT_EQ(original, copied);
+}
+
+TEST(AMemoryUnit, IsAssignableFromGreaterUnit) {
+    constexpr gigabytes original(2);
+    kilobytes copied{};
+    copied = original;
+    ASSERT_EQ(original, copied);
+}
+
+TEST(AMemoryUnit, IsAssignableFromSmallerUnit) {
+    // this expectedly fails to compile:
+    // constexpr gigabytes gb = 41_kb;
+}
+
 
 // TEST(AMemoryUnit, Of8BitsIsAByte) {
 //     constexpr bits bit_value(8);

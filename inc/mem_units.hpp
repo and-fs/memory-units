@@ -31,12 +31,31 @@ namespace afs::mem_units {
     public:
         using ratio = Ratio;
         using rep = Rep;
+        using this_type = memory_unit<Rep, Ratio>;
 
         constexpr memory_unit() = default;
 
-        explicit constexpr memory_unit(const Rep count) : _count(count) {
+        /// Construct with explicit count.
+        explicit constexpr memory_unit(const Rep count) : _count(count) {}
+
+        /// Construct from other memory unit with same or greater ratio.
+        template<RatioType OtherRatio>
+            requires std::ratio_greater_equal_v<OtherRatio, ratio>
+        explicit constexpr memory_unit(const memory_unit<Rep, OtherRatio> &other) {
+            const auto other_converted = memory_unit_cast<this_type>(other);
+            _count = other_converted.count();
         }
 
+        /// Assign from other memory unit with same or greater ratio.
+        template<RatioType OtherRatio>
+            requires std::ratio_greater_equal_v<OtherRatio, ratio>
+        constexpr this_type& operator=(const memory_unit<Rep, OtherRatio> &other) {
+            const auto other_converted = memory_unit_cast<this_type>(other);
+            _count = other_converted.count();
+            return *this;
+        }
+
+        /// Return the current count.
         [[nodiscard]] constexpr Rep count() const { return _count; }
 
         [[nodiscard]] constexpr memory_unit operator+(const memory_unit &other) const {
@@ -45,6 +64,21 @@ namespace afs::mem_units {
             }
             return memory_unit{static_cast<Rep>(count() + other.count())};
         }
+
+        template<RatioType OtherRatio>
+            requires std::ratio_greater_v<OtherRatio, ratio>
+        [[nodiscard]] constexpr this_type operator+(const memory_unit<Rep, OtherRatio> &other) const {
+            const auto other_converted = memory_unit_cast<this_type>(other);
+            return operator+(other_converted);
+        }
+
+        // template<RatioType OtherRatio>
+        //     requires std::ratio_less_v<OtherRatio, ratio>
+        // [[nodiscard]] constexpr this_type operator+(const memory_unit<Rep, OtherRatio> &other) const {
+        //     using other_type = memory_unit<Rep, OtherRatio>;
+        //     const other_type converted = memory_unit_cast<other_type>(*this);
+        //     return other + converted;
+        // }
 
         [[nodiscard]] constexpr memory_unit operator-(const memory_unit &other) const {
             if (std::cmp_less(std::numeric_limits<Rep>::min() + count(), other.count())) {
@@ -141,6 +175,14 @@ namespace afs::mem_units {
         const auto temp = from.count() * conversion::num;
         const auto converted_count = static_cast<Rep>(temp / conversion::den);
         return ToType{converted_count};
+    }
+
+    /// Returns if \a lhs `==` \a rhs, where \a lhs has the greater or an equal ratio.
+    template<MemoryUnitType LhsType, MemoryUnitType RhsType>
+        requires std::ratio_greater_equal_v<typename LhsType::ratio, typename RhsType::ratio>
+    constexpr RhsType operator+(const LhsType &lhs, const RhsType &rhs) {
+        auto converted = memory_unit_cast<RhsType>(lhs);
+        return {converted.count(), rhs.count()};
     }
 
     using bits = memory_unit<std::uint64_t, std::ratio<1, 8> >;
