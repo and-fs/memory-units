@@ -38,7 +38,20 @@ namespace afs::mem_units {
         /// Construct with explicit count.
         explicit constexpr memory_unit(const Rep count) : _count(count) {}
 
-        /// Construct from other memory unit with same or greater ratio.
+        /// Construct from \a other memory unit with same or greater ratio.
+        ///
+        /// Like assigning, constructing from a memory unit with smaller \ref ratio is forbidden,
+        /// since this may cause information loss:
+        ///
+        /// ~~~~~.cpp
+        /// constexpr bytes b(4_mb); // ok, will compile since `mb` has a greater ratio than `b`
+        /// constexpr kilobytes kb(2_b); // will fail to compile, because 2 bytes are not storable in kilobyte
+        /// ~~~~~
+        ///
+        /// To construct a memory unit with smaller \ref ratio, uses the explicit cast (accepting the consequences):
+        /// ~~~~~.cpp
+        /// constexpr kilobytes kb(std::memory_cast<kilobytes>(1200_b)); // results in 1_kb
+        /// ~~~~~
         template<RatioType OtherRatio>
             requires std::ratio_greater_equal_v<OtherRatio, ratio>
         explicit constexpr memory_unit(const memory_unit<Rep, OtherRatio> &other) {
@@ -46,7 +59,18 @@ namespace afs::mem_units {
             _count = other_converted.count();
         }
 
-        /// Assign from other memory unit with same or greater ratio.
+        /// Assign from \a other memory unit with same or greater ratio().
+        ///
+        /// Assigning from a memory unit with smaller \ref ratio is forbidden, since this may cause information loss:
+        /// ~~~~~.cpp
+        /// constexpr bytes b = 4_mb; // ok, will compile since `mb` has a greater ratio than `b`
+        /// constexpr kilobytes kb = 2_b; // will fail to compile, because 2 bytes are not storable in kilobyte
+        /// ~~~~~
+        ///
+        /// To assign a memory unit with smaller \ref ratio, uses the explicit cast (accepting the consequences):
+        /// ~~~~~.cpp
+        /// constexpr kilobytes kb = std::memory_cast<kilobytes>(2_b); // results in 0_kb
+        /// ~~~~~
         template<RatioType OtherRatio>
             requires std::ratio_greater_equal_v<OtherRatio, ratio>
         constexpr this_type& operator=(const memory_unit<Rep, OtherRatio> &other) {
@@ -58,6 +82,13 @@ namespace afs::mem_units {
         /// Return the current count.
         [[nodiscard]] constexpr Rep count() const { return _count; }
 
+        /// `this` + \a other, where ratio() of both is equal.
+        ///
+        /// ~~~~~.cpp
+        /// assert(32_mb + 6_mb == 38_mb)
+        /// ~~~~~
+        ///
+        /// \throws std::overflow_error if the result does not fit into the current count.
         [[nodiscard]] constexpr memory_unit operator+(const memory_unit &other) const {
             if (std::cmp_less(std::numeric_limits<Rep>::max() - count(), other.count())) {
                 throw std::overflow_error("Addition would cause an overflow!");
@@ -65,7 +96,8 @@ namespace afs::mem_units {
             return memory_unit{static_cast<Rep>(count() + other.count())};
         }
 
-        /// `this` + \a other, where ratio of `this` is smaller than ratio of \a other.
+        /// `this` + \a other, where ratio() of `this` is smaller than ratio() of \a other.
+        ///
         /// The returned type is then of `this`:
         /// ~~~~~.cpp
         /// assert(4_b + 2_kb == 2052_b)
@@ -77,7 +109,8 @@ namespace afs::mem_units {
             return operator+(other_converted);
         }
 
-        /// `this` + \a other, where ratio of `this` is greater than ratio of \a other.
+        /// `this` + \a other, where ratio() of `this` is greater than ratio() of \a other.
+        ///
         /// The returned type is then of \a other:
         /// ~~~~~.cpp
         /// assert(1_kb + 2b == 1026_b)
@@ -90,12 +123,47 @@ namespace afs::mem_units {
             return other.operator+(converted);
         }
 
+        /// `this` - \a other, where \ref ratio of both is equal.
+        ///
+        /// ~~~~~.cpp
+        /// assert(32_mb - 6_mb == 26_mb)
+        /// ~~~~~
+        ///
+        /// \throws std::underflow_error if the result does not fit into the current count.
         [[nodiscard]] constexpr memory_unit operator-(const memory_unit &other) const {
             if (std::cmp_less(std::numeric_limits<Rep>::min() + count(), other.count())) {
                 throw std::underflow_error("Subtraction would cause an underflow!");
             }
             return memory_unit{static_cast<Rep>(count() - other.count())};
         }
+
+        /// `this` - \a other, where \ref ratio of \a other is greater.
+        ///
+        /// The returned type is then of `this`:
+        /// ~~~~~.cpp
+        /// assert(1200_kb - 1_mb == 176_b)
+        /// ~~~~~
+        template<RatioType OtherRatio>
+            requires std::ratio_greater_v<OtherRatio, ratio>
+        [[nodiscard]] constexpr this_type operator-(const memory_unit<Rep, OtherRatio> &other) const {
+            const auto other_converted = memory_unit_cast<this_type>(other);
+            return operator-(other_converted);
+        }
+
+        /// `this` + \a other, where \ref ratio of \a other is less.
+        ///
+        /// The returned type is then of \a other:
+        /// ~~~~~.cpp
+        /// assert(1_mb - 1_kb == 1023_kb)
+        /// ~~~~~
+        template<RatioType OtherRatio>
+            requires std::ratio_less_v<OtherRatio, ratio>
+        [[nodiscard]] constexpr memory_unit<Rep, OtherRatio> operator-(const memory_unit<Rep, OtherRatio> &other) const {
+            using other_type = memory_unit<Rep, OtherRatio>;
+            const other_type converted = memory_unit_cast<other_type>(*this);
+            return converted.operator-(other);
+        }
+
     };
 
     template<typename T>
@@ -185,6 +253,30 @@ namespace afs::mem_units {
         const auto temp = from.count() * conversion::num;
         const auto converted_count = static_cast<Rep>(temp / conversion::den);
         return ToType{converted_count};
+    }
+
+    /// Returns \a mem_unit `*` \a multiplier.
+    ///
+    /// ~~~~~.cpp
+    /// assert(21_kb * 2 == 42_kb);
+    /// assert(1024_mb * 2.5f == 5'120_mb);
+    /// ~~~~~
+    template<MemoryUnitType MemoryUnit, typename MultiplierType>
+        requires std::is_arithmetic_v<MultiplierType>
+    [[nodiscard]] constexpr MemoryUnit operator*(const MemoryUnit& mem_unit, MultiplierType multiplier) {
+        return MemoryUnit{static_cast<typename MemoryUnit::rep>(mem_unit.count() * multiplier)};
+    }
+
+    /// Returns \a mem_unit `*` \a multiplier.
+    ///
+    /// ~~~~~.cpp
+    /// assert(21_kb * 2 == 42_kb);
+    /// assert(1024_mb * 2.5f == 5'120_mb);
+    /// ~~~~~
+    template<typename MultiplierType, MemoryUnitType MemoryUnit>
+        requires std::is_arithmetic_v<MultiplierType>
+    [[nodiscard]] constexpr MemoryUnit operator*(MultiplierType multiplier, const MemoryUnit& mem_unit) {
+        return MemoryUnit{static_cast<typename MemoryUnit::rep>(mem_unit.count() * multiplier)};
     }
 
     /// Returns if \a lhs `==` \a rhs, where \a lhs has the greater or an equal ratio.

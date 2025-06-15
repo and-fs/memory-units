@@ -48,10 +48,16 @@ TEST(AMemoryUnit, AddRaisesOverflowErrorIfSumWouldBeTooBig) {
     ASSERT_THROW(std::ignore = value_250 + value_10, std::overflow_error);
 }
 
-TEST(AMemoryUnit, CanSubtractAnotherOfSameType) {
-    constexpr bytes byte_1977(1977);
-    constexpr bytes byte_176(176);
-    ASSERT_THAT((byte_1977 - byte_176).count(), Eq(bytes(1801).count()));
+TEST(AMemoryUnit, CanSubtractAnotherUnitWithSameRatio) {
+    ASSERT_THAT(1977_b - 176_b, Eq(1801_b));
+}
+
+TEST(AMemoryUnit, CanSubtractAnotherUnitWithGreaterRatio) {
+    ASSERT_THAT(1028_kb - 1_mb, Eq(4_kb));
+}
+
+TEST(AMemoryUnit, CanSubtractAnotherUnitWithSmallerRatio) {
+    ASSERT_THAT(2_mb - 2_kb, Eq(2046_kb));
 }
 
 TEST(AMemoryUnit, SubtractRaisesUnderflowErrorIfDifferenceIsBelowMinOfUnsigned) {
@@ -64,6 +70,26 @@ TEST(AMemoryUnit, SubtractRaisesUnderflowErrorIfDifferenceIsBelowMinOfSigned) {
     using test_unit = memory_unit<std::int8_t, std::ratio<1>>;
     test_unit value_120(-120), value_42(42);
     ASSERT_THROW(std::ignore = value_120 - value_42, std::underflow_error);
+}
+
+TEST(AMemoryUnit, CanBeMultipliedByInteger) {
+    EXPECT_THAT(2_mb * 4, Eq(8_mb));
+    EXPECT_THAT(128_kb * 0, Eq(0_kb));
+}
+
+TEST(AMemoryUnit, CanMultiplyAnInteger) {
+    EXPECT_THAT(4 * 2_mb, Eq(8_mb));
+    EXPECT_THAT(0 * 128_kb, Eq(0_kb));
+}
+
+TEST(AMemoryUnit, CanBeMultipliedByFloat) {
+    EXPECT_THAT(30_kb * 1.5f, Eq(45_kb));
+    EXPECT_THAT(42_gb * 0.1f, Eq(4_gb));
+}
+
+TEST(AMemoryUnit, CanMultiplyAFloat) {
+    EXPECT_THAT(1.5f * 30_kb, Eq(45_kb));
+    EXPECT_THAT(0.1f * 42_gb, Eq(4_gb));
 }
 
 TEST(AMemoryUnit, SupportsBitLiteral) {
