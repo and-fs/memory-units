@@ -38,9 +38,9 @@ TEST(AMemoryUnit, CanAddAnotherUnitWithGreaterRatio) {
     ASSERT_THAT(42_kb + 3_mb, Eq(3'114_kb));
 }
 
-// TEST(AMemoryUnit, CanAddAnotherUnitWithSmallerRatio) {
-//     ASSERT_THAT(5_gb + 43_mb, Eq(5'163_mb));
-// }
+TEST(AMemoryUnit, CanAddAnotherUnitWithSmallerRatio) {
+    ASSERT_THAT(5_gb + 43_mb, Eq(5'163_mb));
+}
 
 TEST(AMemoryUnit, AddRaisesOverflowErrorIfSumWouldBeTooBig) {
     using test_unit = memory_unit<std::uint8_t, std::ratio<1>>;

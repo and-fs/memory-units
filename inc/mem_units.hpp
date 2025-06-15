@@ -65,6 +65,11 @@ namespace afs::mem_units {
             return memory_unit{static_cast<Rep>(count() + other.count())};
         }
 
+        /// `this` + \a other, where ratio of `this` is smaller than ratio of \a other.
+        /// The returned type is then of `this`:
+        /// ~~~~~.cpp
+        /// assert(4_b + 2_kb == 2052_b)
+        /// ~~~~~
         template<RatioType OtherRatio>
             requires std::ratio_greater_v<OtherRatio, ratio>
         [[nodiscard]] constexpr this_type operator+(const memory_unit<Rep, OtherRatio> &other) const {
@@ -72,13 +77,18 @@ namespace afs::mem_units {
             return operator+(other_converted);
         }
 
-        // template<RatioType OtherRatio>
-        //     requires std::ratio_less_v<OtherRatio, ratio>
-        // [[nodiscard]] constexpr this_type operator+(const memory_unit<Rep, OtherRatio> &other) const {
-        //     using other_type = memory_unit<Rep, OtherRatio>;
-        //     const other_type converted = memory_unit_cast<other_type>(*this);
-        //     return other + converted;
-        // }
+        /// `this` + \a other, where ratio of `this` is greater than ratio of \a other.
+        /// The returned type is then of \a other:
+        /// ~~~~~.cpp
+        /// assert(1_kb + 2b == 1026_b)
+        /// ~~~~~
+        template<RatioType OtherRatio>
+            requires std::ratio_less_v<OtherRatio, ratio>
+        [[nodiscard]] constexpr memory_unit<Rep, OtherRatio> operator+(const memory_unit<Rep, OtherRatio> &other) const {
+            using other_type = memory_unit<Rep, OtherRatio>;
+            const other_type converted = memory_unit_cast<other_type>(*this);
+            return other.operator+(converted);
+        }
 
         [[nodiscard]] constexpr memory_unit operator-(const memory_unit &other) const {
             if (std::cmp_less(std::numeric_limits<Rep>::min() + count(), other.count())) {
