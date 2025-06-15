@@ -88,12 +88,29 @@ namespace afs::mem_units {
         /// assert(32_mb + 6_mb == 38_mb)
         /// ~~~~~
         ///
-        /// \throws std::overflow_error if the result does not fit into the current count.
+        /// \throws std::overflow_error if the result does not fit into the current rep type.
         [[nodiscard]] constexpr memory_unit operator+(const memory_unit &other) const {
             if (std::cmp_less(std::numeric_limits<Rep>::max() - count(), other.count())) {
                 throw std::overflow_error("Addition would cause an overflow!");
             }
             return memory_unit{static_cast<Rep>(count() + other.count())};
+        }
+
+        /// `this` += \a other, where \ref ratio of both is equal.
+        ///
+        /// ~~~~~.cpp
+        /// auto value = 32_mb;
+        /// value += 6_mb;
+        /// assert(value == 38_mb)
+        /// ~~~~~
+        ///
+        /// \throws std::overflow_error if the result does not fit into the current rep type.
+        constexpr memory_unit& operator+=(const memory_unit &other) {
+            if (std::cmp_less(std::numeric_limits<Rep>::max() - count(), other.count())) {
+                throw std::overflow_error("Addition would cause an overflow!");
+            }
+            _count += other.count();
+            return *this;
         }
 
         /// `this` + \a other, where ratio() of `this` is smaller than ratio() of \a other.
